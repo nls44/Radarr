@@ -30,7 +30,7 @@ Radarr is a movie collection manager for Usenet and BitTorrent users. It can mon
 
 ## Feature Requests
 
-[Feature Requests](https://github.com/lidarr/Radarr/issues/new?assignees=&labels=Type%3A+Enhancement&template=feature_request.md&title=)
+[Feature Requests](https://github.com/Radarr/Radarr/issues/new?assignees=&labels=Type%3A+Enhancement&template=feature_request.md&title=)
 
 ## Support
 
@@ -39,7 +39,8 @@ Radarr is a movie collection manager for Usenet and BitTorrent users. It can mon
 [![GitHub - Bugs and Feature Requests Only](https://img.shields.io/badge/github-issues-red.svg?maxAge=60)](https://github.com/Radarr/Radarr/issues)
 [![Wiki](https://img.shields.io/badge/github-wiki-181717.svg?maxAge=60)](https://wiki.servarr.com/Radarr)
 
-## Contributors
+## Contributors & Developers
+[API Documentation](https://radarr.video/docs/api/)
 
 This project exists thanks to all the people who contribute. [Contribute](CONTRIBUTING.md).
 <a href="https://github.com/Radarr/Radarr/graphs/contributors"><img src="https://opencollective.com/Radarr/contributors.svg?width=890&button=false" /></a>
