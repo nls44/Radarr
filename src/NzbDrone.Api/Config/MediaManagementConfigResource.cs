@@ -21,6 +21,7 @@ namespace NzbDrone.Api.Config
 
         public bool SkipFreeSpaceCheckWhenImporting { get; set; }
         public bool CopyUsingHardlinks { get; set; }
+        public bool CopyUsingSymlinks { get; set; }
         public bool ImportExtraFiles { get; set; }
         public string ExtraFileExtensions { get; set; }
         public bool EnableMediaInfo { get; set; }
@@ -45,6 +46,7 @@ namespace NzbDrone.Api.Config
 
                 SkipFreeSpaceCheckWhenImporting = model.SkipFreeSpaceCheckWhenImporting,
                 CopyUsingHardlinks = model.CopyUsingHardlinks,
+                CopyUsingSymlinks = model.CopyUsingSymlinks,
                 ImportExtraFiles = model.ImportExtraFiles,
                 ExtraFileExtensions = model.ExtraFileExtensions,
                 EnableMediaInfo = model.EnableMediaInfo

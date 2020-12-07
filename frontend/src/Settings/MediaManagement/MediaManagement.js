@@ -181,6 +181,23 @@ class MediaManagement extends Component {
                         />
                       </FormGroup>
 
+                      <FormGroup
+                        advancedSettings={advancedSettings}
+                        isAdvanced={true}
+                        size={sizes.MEDIUM}
+                      >
+                        <FormLabel>{translate('UseSymlinksInsteadOfCopy')}</FormLabel>
+
+                        <FormInputGroup
+                          type={inputTypes.CHECK}
+                          name="copyUsingSymlinks"
+                          helpText={translate('CopyUsingSymlinksHelpText')}
+                          helpTextWarning={translate('CopyUsingSymlinksHelpTextWarning')}
+                          onChange={onInputChange}
+                          {...settings.copyUsingSymlinks}
+                        />
+                      </FormGroup>                      
+
                       <FormGroup size={sizes.MEDIUM}>
                         <FormLabel>{translate('ImportExtraFiles')}</FormLabel>
 

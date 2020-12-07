@@ -74,7 +74,8 @@ namespace NzbDrone.Core.Extras.Files
 
             if (readOnly)
             {
-                transferMode = _configService.CopyUsingHardlinks ? TransferMode.HardLinkOrCopy : TransferMode.Copy;
+                transferMode = _configService.CopyUsingSymlinks ? TransferMode.SymLink :
+                                _configService.CopyUsingHardlinks ? TransferMode.HardLinkOrCopy : TransferMode.Copy;
             }
 
             _diskTransferService.TransferFile(path, newFileName, transferMode, true);

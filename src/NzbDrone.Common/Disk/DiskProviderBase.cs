@@ -274,6 +274,18 @@ namespace NzbDrone.Common.Disk
 
         public abstract bool TryCreateHardLink(string source, string destination);
 
+        public abstract bool TryCreateSymLink(string source, string destination);
+
+        public virtual string GetRealPath(string symlinkPath)
+        {
+            return symlinkPath;
+        }
+
+        public virtual string GetDirectoryName(string path)
+        {
+            return path;
+        }
+
         public virtual bool TryCreateRefLink(string source, string destination)
         {
             return false;

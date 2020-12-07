@@ -272,7 +272,7 @@ namespace NzbDrone.Common.Disk
 
             if (sourcePath.PathEquals(targetPath, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (mode.HasFlag(TransferMode.HardLink) || mode.HasFlag(TransferMode.Copy))
+                if (mode.HasFlag(TransferMode.HardLink) || mode.HasFlag(TransferMode.SymLink) || mode.HasFlag(TransferMode.Copy))
                 {
                     throw new IOException(string.Format("Source and destination can't be the same {0}", sourcePath));
                 }
@@ -316,7 +316,15 @@ namespace NzbDrone.Common.Disk
 
             ClearTargetPath(sourcePath, targetPath, overwrite);
 
-            if (mode.HasFlag(TransferMode.HardLink))
+            if (mode.HasFlag(TransferMode.SymLink))
+            {
+                var createdSymlink = _diskProvider.TryCreateSymLink(sourcePath, targetPath);
+                if (createdSymlink)
+                {
+                    return TransferMode.SymLink;
+                }
+            }
+            else if (mode.HasFlag(TransferMode.HardLink))
             {
                 var createdHardlink = _diskProvider.TryCreateHardLink(sourcePath, targetPath);
                 if (createdHardlink)

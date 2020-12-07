@@ -470,6 +470,58 @@ namespace NzbDrone.Mono.Disk
             }
         }
 
+        public override bool TryCreateSymLink(string source, string destination)
+        {
+            try
+            {
+                var fileInfo = UnixFileSystemInfo.GetFileSystemEntry(source);
+
+                if (fileInfo.IsSymbolicLink)
+                {
+                    return false;
+                }
+
+                fileInfo.CreateSymbolicLink(destination);
+                return true;
+            }
+            catch (UnixIOException ex)
+            {
+               _logger.Debug(ex, "Symlinking '{0}' to '{1}' failed.", source, destination);
+               return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug(ex, "Symlinking '{0}' to '{1}' failed.", source, destination);
+                return false;
+            }
+        }
+
+        public override string GetRealPath(string symlinkPath)
+        {
+            try
+            {
+                return UnixPath.GetRealPath(symlinkPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug(ex, "Get real path for '{0}' failed.", symlinkPath);
+                return symlinkPath;
+            }
+        }
+
+        public override string GetDirectoryName(string path)
+        {
+            try
+            {
+                return UnixPath.GetDirectoryName(path);
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug(ex, "Get directory name for '{0}' failed.", path);
+                return path;
+            }
+        }
+
         public override bool TryCreateRefLink(string source, string destination)
         {
             return _createRefLink.TryCreateRefLink(source, destination);

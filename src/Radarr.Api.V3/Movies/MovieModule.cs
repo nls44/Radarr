@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentValidation;
 using Nancy;
+using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore.Events;
@@ -42,7 +43,7 @@ namespace Radarr.Api.V3.Movies
         private readonly IManageCommandQueue _commandQueueManager;
         private readonly IUpgradableSpecification _qualityUpgradableSpecification;
         private readonly IConfigService _configService;
-
+        private readonly IDiskProvider _diskProvider;
         public MovieModule(IBroadcastSignalRMessage signalRBroadcaster,
                            IMovieService moviesService,
                            IMovieTranslationService movieTranslationService,
@@ -51,6 +52,7 @@ namespace Radarr.Api.V3.Movies
                            IManageCommandQueue commandQueueManager,
                            IUpgradableSpecification qualityUpgradableSpecification,
                            IConfigService configService,
+                           IDiskProvider diskProvider,
                            RootFolderValidator rootFolderValidator,
                            MappedNetworkDriveValidator mappedNetworkDriveValidator,
                            MoviePathValidator moviesPathValidator,
@@ -66,6 +68,7 @@ namespace Radarr.Api.V3.Movies
             _addMovieService = addMovieService;
             _qualityUpgradableSpecification = qualityUpgradableSpecification;
             _configService = configService;
+            _diskProvider = diskProvider;
             _coverMapper = coverMapper;
             _commandQueueManager = commandQueueManager;
 
@@ -136,6 +139,18 @@ namespace Radarr.Api.V3.Movies
                 {
                     var translation = GetTranslationFromDict(translations, movie, configLanguage);
                     var resource = movie.ToResource(availDelay, translation, _qualityUpgradableSpecification);
+
+                    if (_configService.CopyUsingSymlinks && resource.MovieFile != null)
+                    {
+                        // use the original directory and filename if using symlinks
+                        var realPath = _diskProvider.GetRealPath(resource.MovieFile.Path);
+                        resource.Path = _diskProvider.GetDirectoryName(realPath);
+
+                        var originalFilePath = string.IsNullOrEmpty(resource.MovieFile.OriginalFilePath) ? resource.MovieFile.RelativePath :
+                            resource.MovieFile.OriginalFilePath.Substring(resource.MovieFile.OriginalFilePath.LastIndexOf(Path.DirectorySeparatorChar) + 1);
+                        resource.MovieFile.RelativePath = originalFilePath;
+                    }
+
                     _coverMapper.ConvertToLocalUrls(resource.Id, resource.Images, coverFileInfos);
                     moviesResources.Add(resource);
                 }

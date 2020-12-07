@@ -75,7 +75,7 @@ const filterExistingFilesOptions = {
 
 const importModeOptions = [
   { key: 'move', value: translate('MoveFiles') },
-  { key: 'copy', value: translate('HardlinkCopyFiles') }
+  { key: 'copy', value: translate('HardlinkSymlinkCopyFiles') }
 ];
 
 const SELECT = 'select';
