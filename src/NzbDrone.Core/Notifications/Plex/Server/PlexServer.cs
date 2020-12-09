@@ -40,6 +40,7 @@ namespace NzbDrone.Core.Notifications.Plex.Server
 
         public override void OnDownload(DownloadMessage message)
         {
+            message.Movie.MovieFile = message.MovieFile;
             UpdateIfEnabled(message.Movie);
         }
 
