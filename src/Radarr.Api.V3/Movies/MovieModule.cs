@@ -58,6 +58,7 @@ namespace Radarr.Api.V3.Movies
                            MoviePathValidator moviesPathValidator,
                            MovieExistsValidator moviesExistsValidator,
                            MovieAncestorValidator moviesAncestorValidator,
+                           RecycleBinValidator recycleBinValidator,
                            SystemFolderValidator systemFolderValidator,
                            ProfileExistsValidator profileExistsValidator,
                            MovieFolderAsRootFolderValidator movieFolderAsRootFolderValidator)
@@ -87,6 +88,7 @@ namespace Radarr.Api.V3.Movies
                            .SetValidator(mappedNetworkDriveValidator)
                            .SetValidator(moviesPathValidator)
                            .SetValidator(moviesAncestorValidator)
+                           .SetValidator(recycleBinValidator)
                            .SetValidator(systemFolderValidator)
                            .When(s => !s.Path.IsNullOrWhiteSpace());
 
