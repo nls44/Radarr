@@ -21,7 +21,7 @@ namespace NzbDrone.Core.Indexers.AirDCPP
 
         public AirDCPPSettings()
         {
-            Delay = 1;
+            Delay = 3000;
             MultiLanguages = new List<int>();
         }
 
@@ -34,7 +34,7 @@ namespace NzbDrone.Core.Indexers.AirDCPP
         [FieldDefinition(2, Type = FieldType.Password, Label = "Password")]
         public string Password { get; set; }
 
-        [FieldDefinition(3, Label = "Delay", HelpText = "Time in minutes to delay new nzbs before they appear on the RSS feed", Advanced = true)]
+        [FieldDefinition(3, Label = "Delay", HelpText = "Time in milliseconds to wait before retrieving hub search results", Advanced = true)]
         public int Delay { get; set; }
         public IEnumerable<int> MultiLanguages { get; set; }
 

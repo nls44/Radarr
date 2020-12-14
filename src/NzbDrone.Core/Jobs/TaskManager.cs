@@ -10,6 +10,7 @@ using NzbDrone.Core.HealthCheck;
 using NzbDrone.Core.Housekeeping;
 using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.Lifecycle;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
@@ -67,6 +68,7 @@ namespace NzbDrone.Core.Jobs
                     new ScheduledTask { Interval = 24 * 60, TypeName = typeof(RefreshMovieCommand).FullName },
                     new ScheduledTask { Interval = 24 * 60, TypeName = typeof(HousekeepingCommand).FullName },
                     new ScheduledTask { Interval = 24 * 60, TypeName = typeof(CleanUpRecycleBinCommand).FullName },
+                    new ScheduledTask { Interval = 30, TypeName = typeof(MissingMoviesSearchCommand).FullName },
 
                     new ScheduledTask
                     {

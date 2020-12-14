@@ -53,9 +53,9 @@ namespace NzbDrone.Core.Indexers.AirDCPP
             var legalSearchTerm = RemoveInvalidChars(searchTerm);
             PerformHubSearch(searchInstanceId, legalSearchTerm);
 
-            var searchResultsRequest = BuildRequest().Resource($"search/{searchInstanceId}/results/0/100");
+            var searchResultsRequest = BuildRequest().Resource($"search/{searchInstanceId}/results/0/1000");
 
-            Delay(3000);
+            Delay(settings.Delay);
 
             return searchResultsRequest.Build();
         }
@@ -150,7 +150,7 @@ namespace NzbDrone.Core.Indexers.AirDCPP
 
         public List<QueueResult> GetQueueHistory(AirDCPPClientSettings settings)
         {
-            var queueRequest = BuildRequest(settings).Resource($"queue/bundles/0/100").Build();
+            var queueRequest = BuildRequest(settings).Resource($"queue/bundles/0/1000").Build();
 
             return ProcessRequest<List<QueueResult>>(queueRequest);
         }
