@@ -196,7 +196,7 @@ class MediaManagement extends Component {
                           onChange={onInputChange}
                           {...settings.copyUsingSymlinks}
                         />
-                      </FormGroup>                      
+                      </FormGroup>
 
                       <FormGroup size={sizes.MEDIUM}>
                         <FormLabel>{translate('ImportExtraFiles')}</FormLabel>
