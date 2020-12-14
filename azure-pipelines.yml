@@ -147,6 +147,8 @@ stages:
              yarn
           path: $(yarnCacheFolder)
         displayName: Cache Yarn packages
+      - bash: yarn global add gulp-cli
+        displayName: Add Gulp
       - bash: ./build.sh --frontend
         displayName: Build Radarr Frontend
         env:
