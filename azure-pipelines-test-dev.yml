@@ -1,0 +1,400 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+variables:
+  outputFolder: './_output'
+  artifactsFolder: './_artifacts'
+  testsFolder: './_tests'
+  majorVersion: '3.0.1'
+  minorVersion: $[counter('minorVersion', 2000)]
+  radarrVersion: '$(majorVersion).$(minorVersion)'
+  buildName: '$(Build.SourceBranchName).$(radarrVersion)'
+  dotnetVersion: '3.1.404'
+  yarnCacheFolder: $(Pipeline.Workspace)/.yarn
+
+trigger:
+  branches:
+    include:
+    - develop
+    - master
+
+pr:
+- develop
+
+stages:
+  - stage: Setup
+    displayName: Setup
+    jobs:
+    - job:
+      displayName: Build Variables
+      pool:
+        vmImage: 'ubuntu-18.04'
+      steps:
+      # Set the build name properly.  The 'name' property won't recursively expand so hack here:
+      - bash: echo "##vso[build.updatebuildnumber]$RADARRVERSION"
+        displayName: Set Build Name
+      - bash: |
+          if [[ $BUILD_REASON == "PullRequest" ]]; then
+          git diff origin/develop...HEAD  --name-only | grep -E "^(src/|azure-pipelines.yml)"
+          echo $? > not_backend_update
+          else
+          echo 0 > not_backend_update
+          fi
+          cat not_backend_update
+        displayName: Check for Backend File Changes
+      - publish: not_backend_update
+        artifact: not_backend_update
+        displayName: Publish update type
+  - stage: Build_Backend
+    displayName: Build Backend
+    dependsOn: Setup
+    jobs:
+    - job: Backend
+      strategy:
+        matrix:
+          Linux:
+            osName: 'Linux'
+            imageName: 'ubuntu-18.04'
+          Windows:
+            osName: 'Windows'
+            imageName: 'windows-2019'
+
+      pool:
+        vmImage: $(imageName)
+      variables:
+        # Disable stylecop here - linting errors get caught by the analyze task
+        EnableAnalyzers: 'false'
+      steps:
+      - checkout: self
+        submodules: true
+        fetchDepth: 1
+      - task: UseDotNet@2
+        displayName: 'Install .net core'
+        inputs:
+          version: $(dotnetVersion)
+      - bash: ./build.sh --backend
+        displayName: Build Radarr Backend
+      - bash: |
+          find ${OUTPUTFOLDER} -type f ! -path "*/publish/*" -exec rm -rf {} \;
+          find ${OUTPUTFOLDER} -depth -empty -type d -exec rm -r "{}" \;
+          find ${TESTSFOLDER} -type f ! -path "*/publish/*" -exec rm -rf {} \;
+          find ${TESTSFOLDER} -depth -empty -type d -exec rm -r "{}" \;
+        displayName: Clean up intermediate output
+        condition: and(succeeded(), ne(variables['osName'], 'Windows'))
+      - publish: $(outputFolder)
+        artifact: '$(osName)Backend'
+        displayName: Publish Backend
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+      - publish: '$(testsFolder)/netcoreapp3.1/win-x64/publish'
+        artifact: WindowsCoreTests
+        displayName: Publish Windows Test Package
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+      - publish: '$(testsFolder)/net462/linux-x64/publish'
+        artifact: LinuxTests
+        displayName: Publish Linux Mono Test Package
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+      - publish: '$(testsFolder)/netcoreapp3.1/linux-x64/publish'
+        artifact: LinuxCoreTests
+        displayName: Publish Linux Test Package
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+      - publish: '$(testsFolder)/netcoreapp3.1/linux-musl-x64/publish'
+        artifact: LinuxMuslCoreTests
+        displayName: Publish Linux Musl Test Package
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+
+  - stage: Build_Frontend
+    displayName: Frontend
+    dependsOn: Setup
+    jobs:
+    - job: Build
+      strategy:
+        matrix:
+          Linux:
+            osName: 'Linux'
+            imageName: 'ubuntu-18.04'
+          Windows:
+            osName: 'Windows'
+            imageName: 'windows-2019'
+      pool:
+        vmImage: $(imageName)
+      steps:
+      - task: NodeTool@0
+        displayName: Set Node.js version
+        inputs:
+          versionSpec: '10.x'
+      - checkout: self
+        submodules: true
+        fetchDepth: 1
+      - task: Cache@2
+        inputs:
+          key: 'yarn | "$(osName)" | yarn.lock'
+          restoreKeys: |
+             yarn | "$(osName)"
+             yarn
+          path: $(yarnCacheFolder)
+        displayName: Cache Yarn packages
+      - bash: yarn global add gulp-cli
+        displayName: Add Gulp
+      - bash: ./build.sh --frontend
+        displayName: Build Radarr Frontend
+        env:
+          FORCE_COLOR: 0
+          YARN_CACHE_FOLDER: $(yarnCacheFolder)
+      - publish: $(outputFolder)
+        artifact: '$(osName)Frontend'
+        displayName: Publish Frontend
+        condition: and(succeeded(), eq(variables['osName'], 'Windows'))
+        
+  - stage: Installer
+    dependsOn:
+    - Build_Backend
+    - Build_Frontend
+    jobs:
+    - job: Windows_Installer
+      displayName: Create Installer
+      pool:
+        vmImage: 'windows-2019'
+      steps:
+      - checkout: self
+        fetchDepth: 1
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: WindowsBackend
+          targetPath: _output
+        displayName: Fetch Backend
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: WindowsFrontend
+          targetPath: _output
+        displayName: Fetch Frontend
+      - bash: ./build.sh --packages
+        displayName: Create Packages
+      - bash: |
+          setup/inno/ISCC.exe setup/radarr.iss //DFramework=netcoreapp3.1 //DRuntime=win-x86
+          cp setup/output/Radarr.*windows.netcoreapp3.1.exe ${BUILD_ARTIFACTSTAGINGDIRECTORY}/Radarr.${BUILDNAME}.windows-core-x86-installer.exe
+        displayName: Create .NET Core Windows installer
+      - bash: |
+          setup/inno/ISCC.exe setup/radarr.iss //DFramework=netcoreapp3.1 //DRuntime=win-x64
+          cp setup/output/Radarr.*windows.netcoreapp3.1.exe ${BUILD_ARTIFACTSTAGINGDIRECTORY}/Radarr.${BUILDNAME}.windows-core-x64-installer.exe
+        displayName: Create .NET Core Windows installer
+      - publish: $(Build.ArtifactStagingDirectory)
+        artifact: 'WindowsInstaller'
+        displayName: Publish Installer
+
+  - stage: Packages
+    dependsOn:
+    - Build_Backend
+    - Build_Frontend
+    jobs:
+    - job: Other_Packages
+      displayName: Create Standard Packages
+      pool:
+        vmImage: 'ubuntu-18.04'
+      steps:
+      - checkout: self
+        fetchDepth: 1
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: WindowsBackend
+          targetPath: _output
+        displayName: Fetch Backend
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: WindowsFrontend
+          targetPath: _output
+        displayName: Fetch Frontend
+      - bash: ./build.sh --packages
+        displayName: Create Packages
+      - bash: |
+          find . -name "Radarr" -exec chmod a+x {} \;
+          find . -name "Radarr.Update" -exec chmod a+x {} \;
+        displayName: Set executable bits
+      - task: ArchiveFiles@2
+        displayName: Create Windows Core zip
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).windows-core-x64.zip'
+          archiveType: 'zip'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/win-x64/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create Windows x86 Core zip
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).windows-core-x86.zip'
+          archiveType: 'zip'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/win-x86/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create Linux Mono tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-x64/net462
+      - task: ArchiveFiles@2
+        displayName: Create Linux Core tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux-core-x64.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-x64/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create Linux Musl Core tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux-musl-core-x64.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-musl-x64/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create ARM32 Linux Core tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux-core-arm.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-arm/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create ARM64 Linux Core tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux-core-arm64.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-arm64/netcoreapp3.1
+      - task: ArchiveFiles@2
+        displayName: Create ARM64 Linux Musl Core tar
+        inputs:
+          archiveFile: '$(Build.ArtifactStagingDirectory)/Radarr.$(buildName).linux-musl-core-arm64.tar.gz'
+          archiveType: 'tar'
+          tarCompression: 'gz'
+          includeRootFolder: false
+          rootFolderOrFile: $(artifactsFolder)/linux-musl-arm64/netcoreapp3.1
+      - publish: $(Build.ArtifactStagingDirectory)
+        artifact: 'Packages'
+        displayName: Publish Packages
+
+  - stage: Integration
+    displayName: Integration
+    dependsOn: Packages
+
+    jobs:
+    - job: Prepare
+      pool:
+        vmImage: 'ubuntu-18.04'
+      steps:
+      - checkout: none
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          buildType: 'current'
+          artifactName: 'not_backend_update'
+          targetPath: '.'
+      - bash: echo "##vso[task.setvariable variable=backendNotUpdated;isOutput=true]$(cat not_backend_update)"
+        name: setVar
+
+  - stage: Automation
+    displayName: Automation
+    dependsOn: Packages
+    
+    jobs:
+    - job: Automation
+      strategy:
+        matrix:
+          Linux:
+            osName: 'Linux'
+            imageName: 'ubuntu-18.04'
+            pattern: 'Radarr.**.linux-core-x64.tar.gz'
+            failBuild: true
+          Windows:
+            osName: 'Windows'
+            imageName: 'windows-2019'
+            pattern: 'Radarr.**.windows-core-x64.zip'
+            failBuild: true
+
+      pool:
+        vmImage: $(imageName)
+        
+      steps:
+      - task: UseDotNet@2
+        displayName: 'Install .net core'
+        inputs:
+          version: $(dotnetVersion)
+      - checkout: none
+      - task: DownloadPipelineArtifact@2
+        displayName: Download Test Artifact
+        inputs:
+          buildType: 'current'
+          artifactName: '$(osName)CoreTests'
+          targetPath: $(testsFolder)
+      - task: DownloadPipelineArtifact@2
+        displayName: Download Build Artifact
+        inputs:
+          buildType: 'current'
+          artifactName: Packages
+          itemPattern: '**/$(pattern)'
+          targetPath: $(Build.ArtifactStagingDirectory)
+      - task: ExtractFiles@1
+        inputs:
+          archiveFilePatterns: '$(Build.ArtifactStagingDirectory)/**/$(pattern)' 
+          destinationFolder: '$(Build.ArtifactStagingDirectory)/bin'
+        displayName: Extract Package
+      - bash: |
+          mkdir -p ./bin/
+          cp -r -v ${BUILD_ARTIFACTSTAGINGDIRECTORY}/bin/Radarr/. ./bin/
+        displayName: Move Package Contents
+      - bash: |
+          chmod a+x ${TESTSFOLDER}/test.sh
+          ${TESTSFOLDER}/test.sh ${OSNAME} Automation Test
+        displayName: Run Automation Tests
+      - task: CopyFiles@2
+        displayName: 'Copy Screenshot to: $(Build.ArtifactStagingDirectory)'
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: |
+            **/*_test_screenshot.png
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/screenshots'
+      - publish: $(Build.ArtifactStagingDirectory)/screenshots
+        artifact: '$(osName)AutomationScreenshots'
+        displayName: Publish Screenshot Bundle
+        condition: and(succeeded(), eq(variables['System.JobAttempt'], '1'))
+
+  - stage: Github_Release
+    displayName: Github Release
+    dependsOn:
+    - Automation
+    - Integration
+
+    jobs:
+    - job: Github_Release
+      pool:
+        vmImage: 'ubuntu-18.04'
+      steps:
+      - checkout: none
+      - task: GitHubRelease@0
+        displayName: ‘Create GitHub Release’
+        inputs:
+            gitHubConnection: github.com_nls44
+            repositoryName: '$(Build.Repository.Name)' 
+            #action: 'create' # Options: create, edit, delete
+            target: '$(Build.SourceVersion)' # Required when action == Create || Action == Edit
+            tagSource: 'auto' # Required when action == Create# Options: auto, manual
+            #tagPattern: # Optional
+            #tag: # Required when action == Edit || Action == Delete || TagSource == Manual
+            #title: # Optional
+            #releaseNotesSource: 'file' # Optional. Options: file, input
+            #releaseNotesFile: # Optional
+            #releaseNotes: # Optional
+            assets: '$(Build.ArtifactStagingDirectory)/Packages/*' # Optional
+            #assetUploadMode: 'delete' # Optional. Options: delete, replace
+            #isDraft: false # Optional
+            #isPreRelease: false # Optional
+            #addChangeLog: true # Optional
+            #compareWith: 'lastFullRelease' # Required when addChangeLog == True. Options: lastFullRelease, lastRelease, lastReleaseByTag
+            #releaseTag: # Required when compareWith == LastReleaseByTag
