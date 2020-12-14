@@ -318,6 +318,13 @@ stages:
         vmImage: 'ubuntu-18.04'
       steps:
       - checkout: none
+      - task: DownloadPipelineArtifact@2
+        displayName: Download Build Artifact
+        inputs:
+          buildType: 'current'
+          artifactName: Packages
+          itemPattern: '**/*'
+          targetPath: $(Build.ArtifactStagingDirectory)
       - task: GitHubRelease@0
         displayName: ‘Create GitHub Release’
         inputs:
@@ -332,9 +339,6 @@ stages:
             #releaseNotesSource: 'file' # Optional. Options: file, input
             #releaseNotesFile: # Optional
             #releaseNotes: # Optional
-            assets: |
-              $(Build.ArtifactStagingDirectory)/*.zip
-              $(Build.ArtifactStagingDirectory)/*.tar.gz
             #assetUploadMode: 'delete' # Optional. Options: delete, replace
             #isDraft: false # Optional
             #isPreRelease: false # Optional
