@@ -765,7 +765,7 @@ stages:
       - task: GitHubRelease@0
         displayName: ‘Create GitHub Release’
         inputs:
-            gitHubConnection: nls44
+            gitHubConnection: radarr-airdcpp
             repositoryName: '$(Build.Repository.Name)' 
             #action: 'create' # Options: create, edit, delete
             target: '$(Build.SourceVersion)' # Required when action == Create || Action == Edit
