@@ -223,7 +223,10 @@ stages:
           archiveType: 'zip'
           includeRootFolder: false
           rootFolderOrFile: $(artifactsFolder)/win-x86/netcoreapp3.1
-
+      - publish: $(Build.ArtifactStagingDirectory)
+        artifact: 'Packages'
+        displayName: Publish Packages
+        
   - stage: Integration
     displayName: Integration
     dependsOn: Packages
