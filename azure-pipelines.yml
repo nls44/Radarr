@@ -61,7 +61,7 @@ stages:
             imageName: 'ubuntu-18.04'
           Mac:
             osName: 'Mac'
-            imageName: 'macos-10.14'
+            imageName: 'macOS-10.15'
           Windows:
             osName: 'Windows'
             imageName: 'windows-2019'
@@ -125,7 +125,7 @@ stages:
             imageName: 'ubuntu-18.04'
           Mac:
             osName: 'Mac'
-            imageName: 'macos-10.14'
+            imageName: 'macOS-10.15'
           Windows:
             osName: 'Windows'
             imageName: 'windows-2019'
@@ -334,7 +334,7 @@ stages:
           MacCore:
             osName: 'Mac'
             testName: 'MacCore'
-            imageName: 'macos-10.14'
+            imageName: 'macOS-10.15'
           WindowsCore:
             osName: 'Windows'
             testName: 'WindowsCore'
@@ -480,7 +480,7 @@ stages:
           MacCore:
             osName: 'Mac'
             testName: 'MacCore'
-            imageName: 'macos-10.14'
+            imageName: 'macOS-10.15'
             pattern: 'Radarr.**.osx-core-x64.tar.gz'
           WindowsCore:
             osName: 'Windows'
@@ -632,7 +632,7 @@ stages:
             failBuild: true
           Mac:
             osName: 'Mac'
-            imageName: 'macos-10.14'
+            imageName: 'macOS-10.15'
             pattern: 'Radarr.**.osx-core-x64.tar.gz'
             failBuild: true
           Windows:
