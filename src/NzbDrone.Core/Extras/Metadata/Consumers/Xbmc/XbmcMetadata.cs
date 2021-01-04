@@ -126,6 +126,8 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                 var selectedSettingsLanguage = Language.FindById(movieMetadataLanguage);
                 var movieTranslation = movieTranslations.FirstOrDefault(mt => mt.Language == selectedSettingsLanguage);
 
+                var credits = _creditService.GetAllCreditsForMovie(movie.Id);
+
                 var watched = GetExistingWatchedStatus(movie, movieFile.RelativePath);
 
                 var sb = new StringBuilder();
@@ -144,69 +146,38 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
 
                     details.Add(new XElement("title", movieTranslation?.Title ?? movie.Title));
 
+                    details.Add(new XElement("originaltitle", movie.OriginalTitle));
+
+                    details.Add(new XElement("sorttitle", movie.SortTitle));
+
+                    if (movie.Ratings != null && movie.Ratings.Votes > 0)
+                    {
+                        var setRating = new XElement("ratings");
+                        var setRatethemoviedb = new XElement("rating", new XAttribute("name", "themoviedb"), new XAttribute("max", "10"), new XAttribute("default", "true"));
+                        setRatethemoviedb.Add(new XElement("value", movie.Ratings.Value));
+                        setRatethemoviedb.Add(new XElement("votes", movie.Ratings.Votes));
+                        setRating.Add(setRatethemoviedb);
+                        details.Add(setRating);
+                    }
+
                     if (movie.Ratings != null && movie.Ratings.Votes > 0)
                     {
                         details.Add(new XElement("rating", movie.Ratings.Value));
                     }
 
+                    details.Add(new XElement("userrating"));
+
+                    details.Add(new XElement("top250"));
+
+                    details.Add(new XElement("outline"));
+
                     details.Add(new XElement("plot", movieTranslation?.Overview ?? movie.Overview));
-                    details.Add(new XElement("id", movie.ImdbId));
-                    details.Add(new XElement("tmdbid", movie.TmdbId));
 
-                    if (movie.ImdbId.IsNotNullOrWhiteSpace())
-                    {
-                        var imdbId = new XElement("uniqueid", movie.ImdbId);
-                        imdbId.SetAttributeValue("type", "imdb");
-                        imdbId.SetAttributeValue("default", true);
-                        details.Add(imdbId);
-                    }
+                    details.Add(new XElement("tagline"));
 
-                    var uniqueId = new XElement("uniqueid", movie.TmdbId);
-                    uniqueId.SetAttributeValue("type", "tmdb");
-                    details.Add(uniqueId);
+                    details.Add(new XElement("runtime", movie.Runtime));
 
-                    if (movie.Certification.IsNotNullOrWhiteSpace())
-                    {
-                        details.Add(new XElement("mpaa", movie.Certification));
-                    }
-
-                    details.Add(new XElement("year", movie.Year));
-
-                    if (movie.InCinemas.HasValue)
-                    {
-                        details.Add(new XElement("premiered", movie.InCinemas.Value.ToString("yyyy-MM-dd")));
-                    }
-
-                    if (movie.Collection?.Name != null)
-                    {
-                        var setElement = new XElement("set");
-
-                        setElement.Add(new XElement("name", movie.Collection.Name));
-
-                        details.Add(setElement);
-                    }
-
-                    if (movie.Collection?.TmdbId > 0)
-                    {
-                        details.Add(new XElement("tmdbCollectionId", movie.Collection.TmdbId));
-
-                        var uniqueSetId = new XElement("uniqueid", movie.Collection.TmdbId);
-                        uniqueSetId.SetAttributeValue("type", "tmdbSet");
-                        details.Add(uniqueSetId);
-                    }
-
-                    foreach (var genre in movie.Genres)
-                    {
-                        details.Add(new XElement("genre", genre));
-                    }
-
-                    details.Add(new XElement("studio", movie.Studio));
-
-                    if (thumbnail == null)
-                    {
-                        details.Add(new XElement("thumb"));
-                    }
-                    else
+                    if (thumbnail != null)
                     {
                         details.Add(new XElement("thumb", thumbnail.Url));
                     }
@@ -215,7 +186,7 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                     {
                         if (poster != null && poster.Url != null)
                         {
-                            details.Add(new XElement("thumb", new XAttribute("aspect", "poster"), poster.Url));
+                            details.Add(new XElement("thumb", new XAttribute("aspect", "poster"), new XAttribute("preview", poster.Url), poster.Url));
                         }
                     }
 
@@ -226,14 +197,84 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                         {
                             if (fanart != null && fanart.Url != null)
                             {
-                                fanartElement.Add(new XElement("thumb", fanart.Url));
+                                fanartElement.Add(new XElement("thumb", new XAttribute("preview", fanart.Url), fanart.Url));
                             }
                         }
 
                         details.Add(fanartElement);
                     }
 
-                    details.Add(new XElement("watched", watched));
+                    if (movie.Certification.IsNotNullOrWhiteSpace())
+                    {
+                        details.Add(new XElement("mpaa", movie.Certification));
+                    }
+
+                    details.Add(new XElement("playcount"));
+
+                    details.Add(new XElement("lastplayed"));
+
+                    details.Add(new XElement("id", movie.TmdbId));
+
+                    var uniqueId = new XElement("uniqueid", movie.TmdbId);
+                    uniqueId.SetAttributeValue("type", "tmdb");
+                    uniqueId.SetAttributeValue("default", true);
+                    details.Add(uniqueId);
+
+                    if (movie.ImdbId.IsNotNullOrWhiteSpace())
+                    {
+                        var imdbId = new XElement("uniqueid", movie.ImdbId);
+                        imdbId.SetAttributeValue("type", "imdb");
+                        details.Add(imdbId);
+                    }
+
+                    foreach (var genre in movie.Genres)
+                    {
+                        details.Add(new XElement("genre", genre));
+                    }
+
+                    details.Add(new XElement("country"));
+
+                    if (movie.Collection?.Name != null)
+                    {
+                        var setElement = new XElement("set");
+
+                        setElement.Add(new XElement("name", movie.Collection.Name));
+                        setElement.Add(new XElement("overview"));
+
+                        details.Add(setElement);
+                    }
+
+                    foreach (var tag in movie.Tags)
+                    {
+                        details.Add(new XElement("tag", tag));
+                    }
+
+                    foreach (var credit in credits)
+                    {
+                        if (credit.Name != null && credit.Job == "Screenplay")
+                        {
+                            details.Add(new XElement("credits", credit.Name));
+                        }
+                    }
+
+                    foreach (var credit in credits)
+                    {
+                        if (credit.Name != null && credit.Job == "Director")
+                        {
+                            details.Add(new XElement("director", credit.Name));
+                        }
+                    }
+
+                    if (movie.InCinemas.HasValue)
+                    {
+                        details.Add(new XElement("premiered", movie.InCinemas.Value.ToString("yyyy-MM-dd")));
+                    }
+
+                    details.Add(new XElement("year", movie.Year));
+
+                    details.Add(new XElement("studio", movie.Studio));
+
+                    details.Add(new XElement("trailer", "https://www.youtube.com/watch?v=" + movie.YouTubeTrailerId));
 
                     if (movieFile.MediaInfo != null)
                     {
@@ -274,7 +315,8 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                             streamDetails.Add(subtitle);
                         }
 
-                        var credits = _creditService.GetAllCreditsForMovie(movie.Id);
+                        fileInfo.Add(streamDetails);
+                        details.Add(fileInfo);
 
                         foreach (var credit in credits)
                         {
@@ -296,9 +338,6 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                                 details.Add(actorElement);
                             }
                         }
-
-                        fileInfo.Add(streamDetails);
-                        details.Add(fileInfo);
                     }
 
                     doc.Add(details);
