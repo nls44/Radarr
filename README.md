@@ -2,6 +2,8 @@
 
 Radarr is a movie collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new movies and will interface with clients and indexers to grab, sort, and rename them. It can also be configured to automatically upgrade the quality of existing files in the library when a better quality format becomes available.
 
+*Important* Make sure you disable automatic updates to prevent installing the normal Radarr versions!
+
 Radar-AirDCPP adds airdcpp-web as both an indexer and download client. You can keep the original release dirs by using the symlink support added to this fork in combination with rar2fs. Setup a "Remove Path Mapping" on the Settings -> Download Clients page with your AirDCPP download dir (the same as you use in the Download Client config) as the Remote Path and the rar2fs mount that contains the extracted movies as your Local Path. This will create a symlink in the Radarr movie dirs linking to the rar2fs movie. The movie API endpoint has also been updated to add symlink support, which provides compatibility with Bazarr.
 
 ## Example config:
