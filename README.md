@@ -34,6 +34,9 @@ Remote path mapping for the AirDCPP download dir and the rar2fs mount:
 
 ![image](https://user-images.githubusercontent.com/1114597/102640513-dddc5a80-415a-11eb-80a4-d68be79dbc9d.png)
 
+## Docker installs
+
+https://github.com/nls44/Radarr-AirDCPP-docker
 
 ## Major Features Include:
 
